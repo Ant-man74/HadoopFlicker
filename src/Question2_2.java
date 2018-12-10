@@ -19,7 +19,7 @@ import org.apache.hadoop.util.GenericOptionsParser;
 
 import com.google.common.collect.MinMaxPriorityQueue;
 
-public class Question2_1 {
+public class Question2_2 {
 
 	public static class MyMapper extends Mapper<LongWritable, Text, Text, Text> {
 		
@@ -48,42 +48,62 @@ public class Question2_1 {
 			}			
 		}
 	}
+	
+	public static class MyCombiner extends Reducer<Text, StringAndInt, Text, StringAndInt> {
+		@Override
+		protected void reduce(Text key, Iterable<StringAndInt> values, Context context) throws IOException, InterruptedException {
+			
+			// Count the tag occurence for a given country (copy of start of previous reduce iteration)
+			HashMap<String, Integer> tagTotalPerCountry = new HashMap<String, Integer>();
+			for (StringAndInt oneTag : values) {
+				
+				if (tagTotalPerCountry.containsKey(oneTag.tag)) {
+					
+					Integer totalOccurence = tagTotalPerCountry.get(oneTag) + oneTag.nbOccurence;
+					tagTotalPerCountry.put(oneTag.tag, totalOccurence);
+				} else {
+					
+					tagTotalPerCountry.put(oneTag.tag, oneTag.nbOccurence);
+				}
+			}
 
-	public static class MyReducer extends Reducer<Text, Text, Text, Text> {
+			// Output all tag occurence for a country
+			for (String tagName : tagTotalPerCountry.keySet()){
+				context.write(key, new StringAndInt(tagName, tagTotalPerCountry.get(tagName)));
+			}
+		}
+	}
+
+	public static class MyReducer extends Reducer<Text, StringAndInt, Text, Text> {
 	    private IntWritable result = new IntWritable();
 
 		@Override
-		protected void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
-			
-			HashMap<String, Integer> hMapCountryTag = new HashMap<String, Integer>();
+		protected void reduce(Text key, Iterable<StringAndInt> values, Context context) throws IOException, InterruptedException {
 						
-			// Sort and add up all the tag
-			for (Text tag : values) {
-				if (hMapCountryTag.containsKey(tag.toString())) {
-					
-					Integer newTotal = hMapCountryTag.get(tag.toString()) + 1;
-					hMapCountryTag.put(tag.toString(), newTotal);
-				} else {
-	
-					hMapCountryTag.put(tag.toString(), 1);
-				}
-			}
-			
-			// Only the Best 3 are kept in this array
 			MinMaxPriorityQueue<StringAndInt> allTag = MinMaxPriorityQueue.maximumSize(context.getConfiguration().getInt("kParam", 1)).create();
 			
-			// Enter all the tag in the Min/Max Array
-			for (Entry<String, Integer> entry : hMapCountryTag.entrySet()) {
-			
-				allTag.add(new StringAndInt(entry.getKey(),entry.getValue()));			
+			HashMap<String, Integer> map = new HashMap<String, Integer>();
+
+			for (StringAndInt tagTotalPerCountry : values) {			
+				if (map.containsKey(tagTotalPerCountry.tag)) {
+					
+					Integer totalOccurence = map.get(tagTotalPerCountry) + tagTotalPerCountry.nbOccurence;
+					map.put(tagTotalPerCountry.tag, totalOccurence);
+				} else {
+					
+					map.put(tagTotalPerCountry.tag, tagTotalPerCountry.nbOccurence);
+				}	
 			}
 			
-			//Only the best remain and are outputted
-			for (StringAndInt stringAndInt : allTag) {
+			for (String stringAndInt : map.keySet()) {
 				
-				context.write(key, new Text(stringAndInt.getTag() + " " + stringAndInt.getNbrOccurance()));
+				allTag.add(new StringAndInt(stringAndInt,map.get(stringAndInt)));
 			}
-	
+
+			for (int i=0; i < context.getConfiguration().getInt("kParam", 1); i++){
+				StringAndInt tagToAdd = allTag.pollFirst();				
+				context.write(key, new Text(tagToAdd.tag+" "+tagToAdd.nbOccurence));
+			}	
 		}
 	}
 	
@@ -94,10 +114,11 @@ public class Question2_1 {
 		String output = otherArgs[1];
 		conf.setInt("kParam", Integer.parseInt(otherArgs[2]));
 		
-		Job job = Job.getInstance(conf, "Question2_1");
+		Job job = Job.getInstance(conf, "Question2_2");
 		job.setJarByClass(Question2_1.class);
 
 		job.setMapperClass(MyMapper.class);
+		job.setCombinerClass(MyCombiner.class);
 		job.setReducerClass(MyReducer.class);
 		
 		job.setMapOutputKeyClass(Text.class);
