@@ -81,23 +81,10 @@ public class Question2_2 {
 		protected void reduce(Text key, Iterable<StringAndInt> values, Context context) throws IOException, InterruptedException {
 						
 			MinMaxPriorityQueue<StringAndInt> allTag = MinMaxPriorityQueue.maximumSize(context.getConfiguration().getInt("kParam", 1)).create();
-			
-			HashMap<String, Integer> map = new HashMap<String, Integer>();
-
-			for (StringAndInt tagTotalPerCountry : values) {			
-				if (map.containsKey(tagTotalPerCountry.tag)) {
-					
-					Integer totalOccurence = map.get(tagTotalPerCountry) + tagTotalPerCountry.nbOccurence;
-					map.put(tagTotalPerCountry.tag, totalOccurence);
-				} else {
-					
-					map.put(tagTotalPerCountry.tag, tagTotalPerCountry.nbOccurence);
-				}	
-			}
-			
-			for (String stringAndInt : map.keySet()) {
+						
+			for (StringAndInt stringAndInt : values) {
 				
-				allTag.add(new StringAndInt(stringAndInt,map.get(stringAndInt)));
+				allTag.add(new StringAndInt(stringAndInt.getTag(),stringAndInt.getNbrOccurance()));
 			}
 
 			for (int i=0; i < context.getConfiguration().getInt("kParam", 1); i++){
