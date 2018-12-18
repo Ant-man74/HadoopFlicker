@@ -16,7 +16,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 
-public class Question0_0 {
+public class Question1_4 {
 	public static class MyMapper extends Mapper<LongWritable, Text, Text, IntWritable> {
 		
 		private final static IntWritable one = new IntWritable(1);
@@ -53,8 +53,8 @@ public class Question0_0 {
 		String input = otherArgs[0];
 		String output = otherArgs[1];
 		
-		Job job = Job.getInstance(conf, "Question0_0");
-		job.setJarByClass(Question0_0.class);
+		Job job = Job.getInstance(conf, "Question1_4");
+		job.setJarByClass(Question1_4.class);
 
 		job.setMapperClass(MyMapper.class);
 		job.setMapOutputKeyClass(Text.class);
